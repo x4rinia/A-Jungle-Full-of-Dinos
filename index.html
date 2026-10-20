@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>A Jungle Full of Dinos 🦕 - Devcats Wimmelbild</title>
+  <meta name="description" content="Gemütliches 2D-Wimmelbildspiel im echten Devcats-Stil: Finde alle 22 im Zimmer gezeichneten Dinos!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Game Container with Pan & Zoom Viewport -->
+  <main id="game-container">
+    
+    <!-- Top-Left Devcats HUD with Hint Cooldown -->
+    <header class="hud-top-left" aria-label="Spielstand und Hinweise">
+      <div class="counter-badge" id="counter-pill">
+        <button class="hint-btn" id="hint-btn" title="Hinweis anzeigen (Lupe)" aria-label="Hinweis">
+          <svg class="hint-icon" viewBox="0 0 24 24">
+            <circle cx="10.5" cy="10.5" r="7"/>
+            <line x1="16" y1="16" x2="22" y2="22"/>
+          </svg>
+          <div class="hint-cooldown-text" id="hint-cooldown-text">5s</div>
+        </button>
+        <div class="counter-section">
+          <span class="counter-icon">🦕</span>
+          <span id="dino-count">22</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Top-Right Controls -->
+    <nav class="hud-top-right">
+      <button class="hud-btn icon-only" id="mute-btn" title="Ton an/aus" aria-label="Ton umschalten">🔊</button>
+      <button class="hud-btn" id="reset-btn" title="Spiel neu starten">Neustart 🔄</button>
+    </nav>
+
+    <!-- Bottom Left Instructions -->
+    <div class="instructions-pill">
+      <span>🔍 Finde alle 22 niedlichen Dinos im Bild • Klicken zum Einfärben</span>
+    </div>
+
+    <!-- Bottom Right Zoom Controls -->
+    <aside class="zoom-controls">
+      <button class="zoom-btn" id="zoom-in-btn" title="Vergrößern">+</button>
+      <div class="zoom-divider"></div>
+      <button class="zoom-btn" id="zoom-out-btn" title="Verkleinern">−</button>
+      <div class="zoom-divider"></div>
+      <button class="zoom-btn" id="zoom-reset-btn" title="Ansicht anpassen">⛶</button>
+    </aside>
+
+    <!-- Floating Toast Notification -->
+    <div class="toast-msg" id="toast-msg"></div>
+
+    <!-- Scalable World Viewport (1376 x 768) -->
+    <div id="world-viewport">
+      
+      <svg id="game-svg" viewBox="0 0 1376 768" xmlns="http://www.w3.org/2000/svg">
+        
+        <!-- 1. HIGH-RES DEVCATS BACKGROUND WITH HAND-DRAWN DINOS -->
+        <image id="bg-img" href="background.jpg" width="1376" height="768" preserveAspectRatio="none"/>
+
+        <!-- ================================================================
+             2. ALL 22 HAND-DRAWN DINO TARGETS 🦕
+             Only flawless, cute Sauropod dinos with perfect Devcats coloring!
+             ================================================================ -->
+
+        <!-- Dino #1: Buchstapel unten links (X: 67, Y: 677) -->
+        <g class="dino-target" id="dino-1" data-dino-id="1" data-x="67" data-y="677">
+          <circle class="dino-hitbox" cx="67" cy="677" r="38"/>
+          <image class="dino-green-overlay" href="assets/dino_green_1.png" x="40" y="645" width="55" height="65"/>
+        </g>
+
+        <!-- Dino #2: Schlafend auf Kissen (X: 430, Y: 610) -->
+        <g class="dino-target" id="dino-2" data-dino-id="2" data-x="430" data-y="610">
+          <circle class="dino-hitbox" cx="430" cy="610" r="56"/>
+          <image class="dino-green-overlay" href="assets/dino_green_2.png" x="380" y="565" width="100" height="90"/>
+        </g>
+
+        <!-- Dino #3: Auf Holzstuhl sitzend (X: 622, Y: 597) -->
+        <g class="dino-target" id="dino-3" data-dino-id="3" data-x="622" data-y="597">
+          <circle class="dino-hitbox" cx="622" cy="597" r="58"/>
+          <image class="dino-green-overlay" href="assets/dino_green_3.png" x="580" y="545" width="85" height="105"/>
+        </g>
+
+        <!-- Dino #4: In geöffnete Schublade (X: 860, Y: 600) -->
+        <g class="dino-target" id="dino-4" data-dino-id="4" data-x="860" data-y="600">
+          <circle class="dino-hitbox" cx="860" cy="600" r="46"/>
+          <image class="dino-green-overlay" href="assets/dino_green_4.png" x="820" y="560" width="80" height="80"/>
+        </g>
+
+        <!-- Dino #5: Klettert an Globus-Stange (X: 972, Y: 665) -->
+        <g class="dino-target" id="dino-5" data-dino-id="5" data-x="972" data-y="665">
+          <circle class="dino-hitbox" cx="972" cy="665" r="46"/>
+          <image class="dino-green-overlay" href="assets/dino_green_5.png" x="940" y="625" width="65" height="80"/>
+        </g>
+
+        <!-- Dino #6: Am Globus-Sockel (X: 1037, Y: 729) -->
+        <g class="dino-target" id="dino-6" data-dino-id="6" data-x="1037" data-y="729">
+          <circle class="dino-hitbox" cx="1037" cy="729" r="45"/>
+          <image class="dino-green-overlay" href="assets/dino_green_6.png" x="1010" y="690" width="55" height="78"/>
+        </g>
+
+        <!-- Dino #7: Auf Buch neben Globus (X: 925, Y: 477) -->
+        <g class="dino-target" id="dino-7" data-dino-id="7" data-x="925" data-y="477">
+          <circle class="dino-hitbox" cx="925" cy="477" r="43"/>
+          <image class="dino-green-overlay" href="assets/dino_green_7.png" x="890" y="440" width="70" height="75"/>
+        </g>
+
+        <!-- Dino #8: Wandregal neben Pflanze (X: 910, Y: 172) -->
+        <g class="dino-target" id="dino-8" data-dino-id="8" data-x="910" data-y="172">
+          <circle class="dino-hitbox" cx="910" cy="172" r="53"/>
+          <image class="dino-green-overlay" href="assets/dino_green_8.png" x="885" y="125" width="50" height="95"/>
+        </g>
+
+        <!-- Dino #9: Im Glas-Terrarium oben (X: 985, Y: 50) -->
+        <g class="dino-target" id="dino-9" data-dino-id="9" data-x="985" data-y="50">
+          <circle class="dino-hitbox" cx="985" cy="50" r="41"/>
+          <image class="dino-green-overlay" href="assets/dino_green_9.png" x="950" y="15" width="70" height="70"/>
+        </g>
+
+        <!-- Dino #10: Im Efeu oben rechts (X: 1225, Y: 45) -->
+        <g class="dino-target" id="dino-10" data-dino-id="10" data-x="1225" data-y="45">
+          <circle class="dino-hitbox" cx="1225" cy="45" r="36"/>
+          <image class="dino-green-overlay" href="assets/dino_green_10.png" x="1195" y="15" width="60" height="60"/>
+        </g>
+
+        <!-- Dino #11: Stehender kleiner Dino im Regal 2 (X: 1227, Y: 292) -->
+        <g class="dino-target" id="dino-11" data-dino-id="11" data-x="1227" data-y="292">
+          <circle class="dino-hitbox" cx="1227" cy="292" r="38"/>
+          <image class="dino-green-overlay" href="assets/dino_green_11.png" x="1200" y="260" width="55" height="65"/>
+        </g>
+
+        <!-- Dino #12: Stehend auf Büchern Regal 3 (X: 1330, Y: 382) -->
+        <g class="dino-target" id="dino-12" data-dino-id="12" data-x="1330" data-y="382">
+          <circle class="dino-hitbox" cx="1330" cy="382" r="43"/>
+          <image class="dino-green-overlay" href="assets/dino_green_12.png" x="1295" y="345" width="70" height="75"/>
+        </g>
+
+        <!-- Dino #13: Im Blumentopf Fensterbank (X: 345, Y: 365) -->
+        <g class="dino-target" id="dino-13" data-dino-id="13" data-x="345" data-y="365">
+          <circle class="dino-hitbox" cx="345" cy="365" r="41"/>
+          <image class="dino-green-overlay" href="assets/dino_green_13.png" x="310" y="330" width="70" height="70"/>
+        </g>
+
+        <!-- Dino #14: Spaziert auf Fensterbank (X: 245, Y: 440) -->
+        <g class="dino-target" id="dino-14" data-dino-id="14" data-x="245" data-y="440">
+          <circle class="dino-hitbox" cx="245" cy="440" r="41"/>
+          <image class="dino-green-overlay" href="assets/dino_green_14.png" x="210" y="405" width="70" height="70"/>
+        </g>
+
+        <!-- Dino #15: Niedriges Regal auf Büchern (X: 192, Y: 520) -->
+        <g class="dino-target" id="dino-15" data-dino-id="15" data-x="192" data-y="520">
+          <circle class="dino-hitbox" cx="192" cy="520" r="33"/>
+          <image class="dino-green-overlay" href="assets/dino_green_15.png" x="165" y="495" width="55" height="50"/>
+        </g>
+
+        <!-- Dino #16: Linkes Regalbrett zwischen Büchern (X: 525, Y: 310) -->
+        <g class="dino-target" id="dino-16" data-dino-id="16" data-x="525" data-y="310">
+          <circle class="dino-hitbox" cx="525" cy="310" r="46"/>
+          <image class="dino-green-overlay" href="assets/dino_green_16.png" x="495" y="270" width="60" height="80"/>
+        </g>
+
+        <!-- Dino #17: Auf Schrank oben neben Blumentopf (X: 412, Y: 125) -->
+        <g class="dino-target" id="dino-17" data-dino-id="17" data-x="412" data-y="125">
+          <circle class="dino-hitbox" cx="412" cy="125" r="26"/>
+          <image class="dino-green-overlay" href="assets/dino_green_17.png" x="395" y="105" width="35" height="40"/>
+        </g>
+
+        <!-- Dino #18: Regal 1 hinter Büchern (X: 517, Y: 207) -->
+        <g class="dino-target" id="dino-18" data-dino-id="18" data-x="517" data-y="207">
+          <circle class="dino-hitbox" cx="517" cy="207" r="38"/>
+          <image class="dino-green-overlay" href="assets/dino_green_18.png" x="500" y="175" width="35" height="65"/>
+        </g>
+
+        <!-- Dino #19: Regal 3 auf Buchstapel liegend (X: 552, Y: 387) -->
+        <g class="dino-target" id="dino-19" data-dino-id="19" data-x="552" data-y="387">
+          <circle class="dino-hitbox" cx="552" cy="387" r="33"/>
+          <image class="dino-green-overlay" href="assets/dino_green_19.png" x="525" y="360" width="55" height="55"/>
+        </g>
+
+        <!-- Dino #20: Niedriges Regal neben schrägem Buch (X: 229, Y: 526) -->
+        <g class="dino-target" id="dino-20" data-dino-id="20" data-x="229" data-y="526">
+          <circle class="dino-hitbox" cx="229" cy="526" r="30"/>
+          <image class="dino-green-overlay" href="assets/dino_green_20.png" x="212" y="502" width="34" height="48"/>
+        </g>
+
+        <!-- Dino #21: Oberes Wandregal neben Bildrahmen (X: 910, Y: 70) -->
+        <g class="dino-target" id="dino-21" data-dino-id="21" data-x="910" data-y="70">
+          <circle class="dino-hitbox" cx="910" cy="70" r="34"/>
+          <image class="dino-green-overlay" href="assets/dino_green_21.png" x="885" y="42" width="50" height="56"/>
+        </g>
+
+        <!-- Dino #22: Regal 2 kriechend auf Buchstapel rechts (X: 1347, Y: 251) -->
+        <g class="dino-target" id="dino-22" data-dino-id="22" data-x="1347" data-y="251">
+          <circle class="dino-hitbox" cx="1347" cy="251" r="29"/>
+          <image class="dino-green-overlay" href="assets/dino_green_22.png" x="1324" y="238" width="46" height="27"/>
+        </g>
+      </svg>
+    </div>
+
+  </main>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Victory / Win Modal -->
+  <section id="victory-modal" role="dialog" aria-modal="true" aria-labelledby="vic-title">
+    <div class="victory-card">
+      <h1 class="victory-title" id="vic-title">🎉 Raum Entdeckt!</h1>
+      <p class="victory-subtitle">
+        Du hast alle <strong>22 niedlichen Dinos 🦕</strong> im gemütlichen Forscher-Zimmer gefunden!
+      </p>
+
+      <div class="victory-stats">
+        <div class="stat-pill">
+          <span>🦕</span>
+          <span>22 / 22 Dinos gefunden</span>
+        </div>
+      </div>
+
+      <button class="play-again-btn" id="play-again-btn">Erneut spielen 🌿</button>
+    </div>
+  </section>
+
+  <!-- Game Scripts -->
+  <script src="audio.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
