@@ -53,6 +53,10 @@ class DinoGame {
     this.updateCounters();
 
     window.addEventListener('resize', () => this.handleResize());
+    // Handy gedreht: Bild neu einpassen (kurz warten, bis die neuen Maße feststehen)
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => this.fitInitialView(), 250);
+    });
   }
 
   fitInitialView() {
@@ -89,29 +93,75 @@ class DinoGame {
   }
 
   setupPanZoom() {
+    // Pointer Events: funktioniert für Maus, Finger und Stift gleichermaßen
+    const pointers = new Map(); // pointerId -> {x, y}
     let dragStartX = 0;
     let dragStartY = 0;
+    let pinch = null; // { startDist, startScale, worldX, worldY }
 
-    this.container.addEventListener('mousedown', (e) => {
-      if (e.target.closest('.dino-target, .hud-top-left, .hud-top-right, .zoom-controls, .hud-btn')) {
+    const UI_SELECTOR = '.hud-top-left, .hud-top-right, .zoom-controls, .hud-btn, button, #victory-modal';
+
+    const beginSinglePan = (p) => {
+      dragStartX = p.x;
+      dragStartY = p.y;
+      this.startX = p.x - this.panX;
+      this.startY = p.y - this.panY;
+    };
+
+    const beginPinch = () => {
+      const [a, b] = [...pointers.values()];
+      const midX = (a.x + b.x) / 2;
+      const midY = (a.y + b.y) / 2;
+      pinch = {
+        startDist: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
+        startScale: this.scale,
+        // Weltpunkt unter der Fingermitte – bleibt beim Zoomen unter den Fingern
+        worldX: (midX - this.panX) / this.scale,
+        worldY: (midY - this.panY) / this.scale
+      };
+      this.isDragging = true; // Pinch darf nie als Tap auf einen Dino zählen
+    };
+
+    this.container.addEventListener('pointerdown', (e) => {
+      if (e.target.closest(UI_SELECTOR)) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size === 1) {
+        this.isPanning = true;
+        this.isDragging = false;
+        beginSinglePan(pointers.get(e.pointerId));
+        this.container.classList.add('panning');
+      } else if (pointers.size === 2) {
+        beginPinch();
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size >= 2 && pinch) {
+        const [a, b] = [...pointers.values()];
+        const dist = Math.hypot(b.x - a.x, b.y - a.y);
+        const midX = (a.x + b.x) / 2;
+        const midY = (a.y + b.y) / 2;
+        const newScale = Math.min(Math.max(this.minScale, pinch.startScale * (dist / pinch.startDist)), this.maxScale);
+
+        this.scale = newScale;
+        this.panX = midX - pinch.worldX * newScale;
+        this.panY = midY - pinch.worldY * newScale;
+        this.applyTransform();
         return;
       }
 
-      this.isPanning = true;
-      this.isDragging = false;
-      dragStartX = e.clientX;
-      dragStartY = e.clientY;
-      this.startX = e.clientX - this.panX;
-      this.startY = e.clientY - this.panY;
-      this.container.classList.add('panning');
-    });
-
-    window.addEventListener('mousemove', (e) => {
       if (!this.isPanning) return;
       const dx = e.clientX - dragStartX;
       const dy = e.clientY - dragStartY;
+      const threshold = e.pointerType === 'mouse' ? 5 : 10;
 
-      if (Math.hypot(dx, dy) > 5) {
+      if (this.isDragging || Math.hypot(dx, dy) > threshold) {
         this.isDragging = true;
         this.panX = e.clientX - this.startX;
         this.panY = e.clientY - this.startY;
@@ -119,16 +169,35 @@ class DinoGame {
       }
     });
 
-    const endPan = () => {
-      if (!this.isPanning) return;
-      this.isPanning = false;
-      this.container.classList.remove('panning');
-      setTimeout(() => {
-        this.isDragging = false;
-      }, 50);
+    const endPointer = (e) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.delete(e.pointerId);
+
+      if (pointers.size === 1) {
+        // Von Pinch zurück auf einen Finger: ohne Sprung weiter verschieben
+        pinch = null;
+        beginSinglePan([...pointers.values()][0]);
+        return;
+      }
+
+      if (pointers.size === 0) {
+        pinch = null;
+        this.isPanning = false;
+        this.container.classList.remove('panning');
+        // Click-Event feuert nach pointerup – Drag-Flag erst danach zurücksetzen
+        setTimeout(() => {
+          this.isDragging = false;
+        }, 50);
+      }
     };
 
-    window.addEventListener('mouseup', endPan);
+    window.addEventListener('pointerup', endPointer);
+    window.addEventListener('pointercancel', endPointer);
+
+    // iOS Safari: native Seiten-Zoom-Geste unterbinden
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(evt => {
+      document.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
+    });
 
     this.container.addEventListener('wheel', (e) => {
       e.preventDefault();

@@ -7,7 +7,7 @@ Gemütliches 2D-Wimmelbildspiel im Devcats-Stil: Finde alle **22 Dinos**, die im
 ## Features
 - 22 handgezeichnete Dinos zum Finden – gefundene Dinos werden grün eingefärbt
 - Lupe als Hinweis (mit 5 s Cooldown)
-- Zoomen & Verschieben (Maus, Mausrad, Buttons)
+- Zoomen & Verschieben (Maus, Mausrad, Buttons – auf dem Handy mit einem Finger verschieben, mit zwei Fingern zoomen)
 - Fortschritt wird automatisch im Browser gespeichert
 - Soundeffekte (abschaltbar) & Konfetti beim Sieg
 
