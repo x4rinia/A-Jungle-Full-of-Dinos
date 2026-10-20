@@ -38,6 +38,16 @@ html, body {
    Game Canvas & World Viewport
    ========================================================================== */
 
+#game-container,
+#world-viewport,
+#game-svg,
+#game-svg * {
+  touch-action: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
 #game-container {
   position: relative;
   width: 100vw;
@@ -46,8 +56,6 @@ html, body {
   overflow: hidden;
   background: #f7e2b0;
   cursor: grab;
-  /* Finger-Gesten (Verschieben/Pinch-Zoom) werden komplett per JS gesteuert */
-  touch-action: none;
 }
 
 #game-container.panning {
@@ -70,6 +78,12 @@ html, body {
   height: 768px;
   max-width: none;
   filter: drop-shadow(0 6px 18px rgba(92, 58, 33, 0.15));
+}
+
+#bg-img {
+  pointer-events: none !important;
+  -webkit-user-drag: none !important;
+  user-select: none !important;
 }
 
 /* ==========================================================================

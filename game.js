@@ -93,112 +93,149 @@ class DinoGame {
   }
 
   setupPanZoom() {
-    // Pointer Events: funktioniert für Maus, Finger und Stift gleichermaßen
-    const pointers = new Map(); // pointerId -> {x, y}
-    let dragStartX = 0;
-    let dragStartY = 0;
-    let pinch = null; // { startDist, startScale, worldX, worldY }
-
     const UI_SELECTOR = '.hud-top-left, .hud-top-right, .zoom-controls, .hud-btn, button, #victory-modal';
 
-    const beginSinglePan = (p) => {
-      dragStartX = p.x;
-      dragStartY = p.y;
-      this.startX = p.x - this.panX;
-      this.startY = p.y - this.panY;
-    };
+    // -------------------------------------------------------------
+    // 1. TOUCH CONTROLS (Handy & Tablet)
+    // -------------------------------------------------------------
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let startPanX = 0;
+    let startPanY = 0;
+    let pinchStartDist = 0;
+    let pinchStartScale = 1;
+    let pinchWorldX = 0;
+    let pinchWorldY = 0;
+    let isTouchPanning = false;
+    let isPinching = false;
 
-    const beginPinch = () => {
-      const [a, b] = [...pointers.values()];
-      const midX = (a.x + b.x) / 2;
-      const midY = (a.y + b.y) / 2;
-      pinch = {
-        startDist: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
-        startScale: this.scale,
-        // Weltpunkt unter der Fingermitte – bleibt beim Zoomen unter den Fingern
-        worldX: (midX - this.panX) / this.scale,
-        worldY: (midY - this.panY) / this.scale
-      };
-      this.isDragging = true; // Pinch darf nie als Tap auf einen Dino zählen
-    };
-
-    this.container.addEventListener('pointerdown', (e) => {
+    this.container.addEventListener('touchstart', (e) => {
       if (e.target.closest(UI_SELECTOR)) return;
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
 
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-      if (pointers.size === 1) {
-        this.isPanning = true;
+      if (e.touches.length === 1) {
+        isTouchPanning = true;
+        isPinching = false;
         this.isDragging = false;
-        beginSinglePan(pointers.get(e.pointerId));
-        this.container.classList.add('panning');
-      } else if (pointers.size === 2) {
-        beginPinch();
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        startPanX = this.panX;
+        startPanY = this.panY;
+      } else if (e.touches.length >= 2) {
+        isPinching = true;
+        isTouchPanning = false;
+        this.isDragging = true;
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        pinchStartDist = Math.max(10, Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY));
+        pinchStartScale = this.scale;
+        const midX = (t1.clientX + t2.clientX) / 2;
+        const midY = (t1.clientY + t2.clientY) / 2;
+        pinchWorldX = (midX - this.panX) / this.scale;
+        pinchWorldY = (midY - this.panY) / this.scale;
       }
-    });
+    }, { passive: true });
 
-    window.addEventListener('pointermove', (e) => {
-      if (!pointers.has(e.pointerId)) return;
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    this.container.addEventListener('touchmove', (e) => {
+      if (e.target.closest(UI_SELECTOR)) return;
 
-      if (pointers.size >= 2 && pinch) {
-        const [a, b] = [...pointers.values()];
-        const dist = Math.hypot(b.x - a.x, b.y - a.y);
-        const midX = (a.x + b.x) / 2;
-        const midY = (a.y + b.y) / 2;
-        const newScale = Math.min(Math.max(this.minScale, pinch.startScale * (dist / pinch.startDist)), this.maxScale);
+      if (isPinching && e.touches.length >= 2) {
+        if (e.cancelable) e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        const midX = (t1.clientX + t2.clientX) / 2;
+        const midY = (t1.clientY + t2.clientY) / 2;
+        const newScale = Math.min(Math.max(this.minScale, pinchStartScale * (dist / pinchStartDist)), this.maxScale);
 
         this.scale = newScale;
-        this.panX = midX - pinch.worldX * newScale;
-        this.panY = midY - pinch.worldY * newScale;
+        this.panX = midX - pinchWorldX * newScale;
+        this.panY = midY - pinchWorldY * newScale;
         this.applyTransform();
         return;
       }
 
-      if (!this.isPanning) return;
-      const dx = e.clientX - dragStartX;
-      const dy = e.clientY - dragStartY;
-      const threshold = e.pointerType === 'mouse' ? 5 : 10;
+      if (isTouchPanning && e.touches.length === 1) {
+        const dx = e.touches[0].clientX - touchStartX;
+        const dy = e.touches[0].clientY - touchStartY;
 
-      if (this.isDragging || Math.hypot(dx, dy) > threshold) {
+        if (this.isDragging || Math.hypot(dx, dy) > 6) {
+          if (e.cancelable) e.preventDefault();
+          this.isDragging = true;
+          this.panX = startPanX + dx;
+          this.panY = startPanY + dy;
+          this.applyTransform();
+        }
+      }
+    }, { passive: false });
+
+    const endTouch = (e) => {
+      if (e.touches.length === 1) {
+        isPinching = false;
+        isTouchPanning = true;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        startPanX = this.panX;
+        startPanY = this.panY;
+      } else if (e.touches.length === 0) {
+        isTouchPanning = false;
+        isPinching = false;
+        setTimeout(() => {
+          this.isDragging = false;
+        }, 80);
+      }
+    };
+
+    this.container.addEventListener('touchend', endTouch, { passive: true });
+    this.container.addEventListener('touchcancel', endTouch, { passive: true });
+
+    // -------------------------------------------------------------
+    // 2. MOUSE CONTROLS (Desktop)
+    // -------------------------------------------------------------
+    let isMousePanning = false;
+    let mouseStartX = 0;
+    let mouseStartY = 0;
+    let mousePanStartX = 0;
+    let mousePanStartY = 0;
+
+    this.container.addEventListener('mousedown', (e) => {
+      if (e.target.closest(UI_SELECTOR) || e.button !== 0) return;
+      isMousePanning = true;
+      this.isDragging = false;
+      mouseStartX = e.clientX;
+      mouseStartY = e.clientY;
+      mousePanStartX = this.panX;
+      mousePanStartY = this.panY;
+      this.container.classList.add('panning');
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isMousePanning) return;
+      const dx = e.clientX - mouseStartX;
+      const dy = e.clientY - mouseStartY;
+
+      if (this.isDragging || Math.hypot(dx, dy) > 5) {
         this.isDragging = true;
-        this.panX = e.clientX - this.startX;
-        this.panY = e.clientY - this.startY;
+        this.panX = mousePanStartX + dx;
+        this.panY = mousePanStartY + dy;
         this.applyTransform();
       }
     });
 
-    const endPointer = (e) => {
-      if (!pointers.has(e.pointerId)) return;
-      pointers.delete(e.pointerId);
-
-      if (pointers.size === 1) {
-        // Von Pinch zurück auf einen Finger: ohne Sprung weiter verschieben
-        pinch = null;
-        beginSinglePan([...pointers.values()][0]);
-        return;
-      }
-
-      if (pointers.size === 0) {
-        pinch = null;
-        this.isPanning = false;
-        this.container.classList.remove('panning');
-        // Click-Event feuert nach pointerup – Drag-Flag erst danach zurücksetzen
-        setTimeout(() => {
-          this.isDragging = false;
-        }, 50);
-      }
-    };
-
-    window.addEventListener('pointerup', endPointer);
-    window.addEventListener('pointercancel', endPointer);
+    window.addEventListener('mouseup', () => {
+      if (!isMousePanning) return;
+      isMousePanning = false;
+      this.container.classList.remove('panning');
+      setTimeout(() => {
+        this.isDragging = false;
+      }, 50);
+    });
 
     // iOS Safari: native Seiten-Zoom-Geste unterbinden
     ['gesturestart', 'gesturechange', 'gestureend'].forEach(evt => {
       document.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
     });
 
+    // Mausrad Zoom
     this.container.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
